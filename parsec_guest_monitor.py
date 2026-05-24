@@ -18,7 +18,7 @@ def setup_logging(debug=False):
     )
     return logging.getLogger(__name__)
 
-logger = setup_logging(debug=False)
+logger = None
 
 # Auto-detect log file path
 LOG_PATH = os.path.expanduser('~/.parsec/log.txt')
