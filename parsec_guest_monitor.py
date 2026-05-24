@@ -11,12 +11,26 @@ import subprocess
 def setup_logging(debug=False):
     """Configure logging based on debug flag."""
     log_level = logging.DEBUG if debug else logging.INFO
-    logging.basicConfig(
-        level=log_level,
-        format='%(asctime)s - %(levelname)s - %(message)s',
-        datefmt='%Y-%m-%d %H:%M:%S'
-    )
-    return logging.getLogger(__name__)
+    
+    # Check if root logger already has handlers (basicConfig was called elsewhere)
+    if not logging.getLogger().handlers:
+        logging.basicConfig(
+            level=log_level,
+            format='%(asctime)s - %(levelname)s - %(message)s',
+            datefmt='%Y-%m-%d %H:%M:%S'
+        )
+    
+    logger = logging.getLogger(__name__)
+    logger.setLevel(log_level)
+    
+    # Ensure we have a handler with the correct formatter
+    if not logger.handlers:
+        handler = logging.StreamHandler()
+        formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s', datefmt='%Y-%m-%d %H:%M:%S')
+        handler.setFormatter(formatter)
+        logger.addHandler(handler)
+    
+    return logger
 
 logger = None
 
