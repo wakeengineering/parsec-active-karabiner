@@ -107,26 +107,35 @@ def main():
     for line in follow(LOG_PATH):
         stripped_line: str = line.strip()
         
-        if "connected." not in stripped_line:
+        # Check for connection events
+        is_connected_event = "connected." in stripped_line
+        is_disconnected_event = (
+            "disconnected." in stripped_line or
+            "Connection closed" in stripped_line or
+            "kick" in stripped_line
+        )
+        
+        if not is_connected_event and not is_disconnected_event:
             continue
         
-        if current_state:
+        # Handle connection event
+        if is_connected_event:
+            if current_state:
+                continue
+            
+            logger.info("Parsec connected - activating Karabiner variable")
+            current_state = True
+            set_karabiner_var(current_state)
             continue
         
-        logger.info("Parsec connected - activating Karabiner variable")
-        current_state = True
-        set_karabiner_var(current_state)
-        continue
-        
-        if "disconnected." not in stripped_line and "Connection closed" not in stripped_line and "kick" not in stripped_line:
-            continue
-        
-        if not current_state:
-            continue
-        
-        logger.info("Parsec disconnected - deactivating Karabiner variable")
-        current_state = False
-        set_karabiner_var(current_state)
+        # Handle disconnection event
+        if is_disconnected_event:
+            if not current_state:
+                continue
+            
+            logger.info("Parsec disconnected - deactivating Karabiner variable")
+            current_state = False
+            set_karabiner_var(current_state)
 
 def parse_args():
     """Parse command-line arguments."""
