@@ -8,12 +8,12 @@ import time
 import subprocess
 
 # Configure logging with debug support
-def setup_logging(debug=False):
+def setup_logging(debug: bool = False) -> logging.Logger:
     """Configure logging based on debug flag."""
-    log_level = logging.DEBUG if debug else logging.INFO
+    log_level: int = logging.DEBUG if debug else logging.INFO
     
-    # Check if root logger already has handlers (basicConfig was called elsewhere)
-    if not logging.getLogger().handlers:
+    root_logger = logging.getLogger()
+    if not root_logger.handlers:
         logging.basicConfig(
             level=log_level,
             format='%(asctime)s - %(levelname)s - %(message)s',
@@ -23,16 +23,14 @@ def setup_logging(debug=False):
     logger = logging.getLogger(__name__)
     logger.setLevel(log_level)
     
-    # Ensure we have a handler with the correct formatter
-    if not logger.handlers:
-        handler = logging.StreamHandler()
-        formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s', datefmt='%Y-%m-%d %H:%M:%S')
-        handler.setFormatter(formatter)
-        logger.addHandler(handler)
-    
     return logger
 
-logger = None
+logger: logging.Logger | None = None
+
+# Auto-detect log file path
+LOG_PATH: str = os.path.expanduser('~/.parsec/log.txt')
+if not os.path.exists(LOG_PATH) and os.path.exists('/Users/Shared/.parsec/log.txt'):
+    LOG_PATH = '/Users/Shared/.parsec/log.txt'
 
 # Auto-detect log file path
 LOG_PATH = os.path.expanduser('~/.parsec/log.txt')
@@ -57,7 +55,7 @@ def set_karabiner_var(is_active):
     except Exception as e:
         logger.error(f"Unexpected error in set_karabiner_var: {e}")
 
-def follow(filepath):
+def follow(filepath: str):
     """Generates new lines appended to the file, handling file rotation/recreation."""
     logger.debug(f"follow() started monitoring filepath: {filepath}")
     while True:
@@ -91,31 +89,44 @@ def follow(filepath):
         except PermissionError as e:
             logger.error(f"PermissionError for {filepath}: {e}")
             time.sleep(2)
+        except OSError as e:
+            logger.error(f"OSError while monitoring {filepath}: {e}")
+            time.sleep(2)
 
 def main():
     """Main entry point for Parsec guest monitor."""
     logger.info("Parsec Guest Monitor starting...")
     
     # Initialize Karabiner variable to inactive on script startup
-    current_state = False
+    current_state: bool = False
     logger.debug(f"Initial state: current_state={current_state}")
     set_karabiner_var(current_state)
 
     # Monitor new incoming logs
     logger.info(f"Monitoring log file: {LOG_PATH}")
     for line in follow(LOG_PATH):
-        logger.debug(f"Processing line: {line.strip()}")
-        # Match "connected." or "disconnected." strictly as logged by Parsec
-        if "connected." in line:
-            if not current_state:
-                logger.info("Parsec connected - activating Karabiner variable")
-                current_state = True
-                set_karabiner_var(current_state)
-        elif "disconnected." in line or "Connection closed" in line or "kick" in line:
-            if current_state:
-                logger.info("Parsec disconnected - deactivating Karabiner variable")
-                current_state = False
-                set_karabiner_var(current_state)
+        stripped_line: str = line.strip()
+        
+        if "connected." not in stripped_line:
+            continue
+        
+        if current_state:
+            continue
+        
+        logger.info("Parsec connected - activating Karabiner variable")
+        current_state = True
+        set_karabiner_var(current_state)
+        continue
+        
+        if "disconnected." not in stripped_line and "Connection closed" not in stripped_line and "kick" not in stripped_line:
+            continue
+        
+        if not current_state:
+            continue
+        
+        logger.info("Parsec disconnected - deactivating Karabiner variable")
+        current_state = False
+        set_karabiner_var(current_state)
 
 def parse_args():
     """Parse command-line arguments."""
