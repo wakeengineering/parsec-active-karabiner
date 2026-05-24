@@ -1,0 +1,3 @@
+# Make Python scripts executable on all platforms
+*.py eol=lf
+parsec_guest_monitor.py execute=unix,win
