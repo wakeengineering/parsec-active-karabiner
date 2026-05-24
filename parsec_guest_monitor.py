@@ -3,6 +3,7 @@ import argparse
 import contextlib
 import logging
 import os
+import re
 import sys
 import time
 import subprocess
@@ -102,12 +103,12 @@ def main():
     for line in follow(LOG_PATH):
         stripped_line: str = line.strip()
         
-        # Check for connection events
-        is_connected_event = "connected." in stripped_line
+        # Check for connection events - use word boundary to avoid matching "disconnected."
+        is_connected_event = bool(re.search(r'\bconnected\.', stripped_line))
         is_disconnected_event = (
-            "disconnected." in stripped_line or
+            bool(re.search(r'\bdisconnected\.', stripped_line)) or
             "Connection closed" in stripped_line or
-            "kick" in stripped_line
+            re.search(r'\bkick\b', stripped_line)
         )
         
         logger.debug(f"Line received: {stripped_line[:80]}... connected={is_connected_event} disconnected={is_disconnected_event} state={current_state}")
