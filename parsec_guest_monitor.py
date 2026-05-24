@@ -32,11 +32,6 @@ LOG_PATH: str = os.path.expanduser('~/.parsec/log.txt')
 if not os.path.exists(LOG_PATH) and os.path.exists('/Users/Shared/.parsec/log.txt'):
     LOG_PATH = '/Users/Shared/.parsec/log.txt'
 
-# Auto-detect log file path
-LOG_PATH = os.path.expanduser('~/.parsec/log.txt')
-if not os.path.exists(LOG_PATH) and os.path.exists('/Users/Shared/.parsec/log.txt'):
-    LOG_PATH = '/Users/Shared/.parsec/log.txt'
-
 def set_karabiner_var(is_active):
     """Set Karabiner-Elements variable for Parsec guest status."""
     logger.debug(f"set_karabiner_var called with is_active={is_active}")
@@ -115,12 +110,15 @@ def main():
             "kick" in stripped_line
         )
         
+        logger.debug(f"Line received: {stripped_line[:80]}... connected={is_connected_event} disconnected={is_disconnected_event} state={current_state}")
+        
         if not is_connected_event and not is_disconnected_event:
             continue
         
         # Handle connection event
         if is_connected_event:
             if current_state:
+                logger.debug("Already connected, skipping")
                 continue
             
             logger.info("Parsec connected - activating Karabiner variable")
@@ -131,6 +129,7 @@ def main():
         # Handle disconnection event
         if is_disconnected_event:
             if not current_state:
+                logger.debug("Already disconnected, skipping")
                 continue
             
             logger.info("Parsec disconnected - deactivating Karabiner variable")
